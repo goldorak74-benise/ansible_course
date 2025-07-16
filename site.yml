@@ -2,6 +2,7 @@
 - hosts: all
   become: true
   pre_tasks:
+
   - name: install updates for fedora
     tags: always
     ansible.builtin.dnf:
@@ -16,84 +17,17 @@
       update_cache: yes
     when: ansible_distribution == "Ubuntu"
 
-  - name: create user
-    tags: always
-    ansible.builtin.user:
-      name: ghost
-      groups: root 
-
-  - name: add sudoers file for ghost
-    tags: always
-    ansible.builtin.copy:
-      src: sudoer_ghost
-      dest: /etc/sudoers.d/ghost
-      owner: root
-      group: root
-      mode: 0440
-
-  - name: add ssh key for ghost user
-    tags: always
-    ansible.builtin.authorized_key:
-      user: ghost
-      key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILYHOG4EEhHd+vBkvV+BcRWUEyqcRgBwjsKOCVWyIt/r benise@ubuntu-ws"
-
-- hosts: web_servers
+- hosts: all
   become: true
-  tasks:
-
-  - name: install apache on web servers (Ubuntu)
-    tags: apache,ubuntu
-    ansible.builtin.apt:
-      name:
-        - apache2
-        - libapache2-mod-php
-    when: ansible_distribution == "Ubuntu"
-
-  - name: install apache on web servers (Fedora)
-    tags: apache,fedora
-    ansible.builtin.dnf:
-      name: httpd
-    when: ansible_distribution == "Fedora"
-
-  - name: ensure apache is running (Ubuntu)
-    tags: apache,ubuntu
-    ansible.builtin.service:
-      name: apache2
-      state: started
-    when: ansible_distribution == "Ubuntu"
-
-  - name: change email address for admin
-    tags: apache,fedora
-    ansible.builtin.lineinfile:
-      path: /etc/httpd/conf/httpd.conf
-      regexp: '^ServerAdmin'
-      line: ServerAdmin somebodysomewhere.net
-    when: ansible_distribution == "Fedora"
-    register: httpd
-
-  - name: restart httpd (fedora)
-    tags: apache,fedora
-    ansible.builtin.service:
-      name: httpd
-      state: restarted
-    when: httpd.changed
-
-  - name: copy html file for site
-    tags: apache,ubuntu
-    ansible.builtin.copy:
-      src: default_site.html
-      dest: /var/www/html/index.html
-      owner: root
-      group: root
-      mode: 0644
+  roles:
+    - base
 
 - hosts: db_servers
   become: true
-  tasks:
+  roles:
+    - db_servers
 
-  - name: install mariadb package on db servers
-    tags: db,fedora
-    ansible.builtin.dnf:
-      name: mariadb
-      state: latest
-    when: ansible_distribution == "Fedora"
+- hosts: web_servers
+  become: true
+  roles:
+    - web_servers
